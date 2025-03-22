@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
 
     # Meta info for Swagger
-    PROJECT_NAME: str = "Restaurant Management API"
+    PROJECT_NAME: str = "VOS API"
     DESCRIPTION: str = """
     Restaurant Management API helps manage restaurants and bars with features for
     managing users, products, recipes, and invoices.

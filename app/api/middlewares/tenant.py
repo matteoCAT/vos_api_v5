@@ -1,6 +1,7 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -74,6 +75,9 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Use a database session to look up the schema name
         db = SessionLocal()
         try:
+            # Set to public schema first to query the company table
+            db.execute(text('SET search_path TO public'))
+
             company = db.query(Company).filter(Company.id == company_id).first()
             if not company:
                 return settings.DEFAULT_SCHEMA

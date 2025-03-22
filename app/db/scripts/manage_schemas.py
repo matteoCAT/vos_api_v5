@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import ProgrammingError
+from sqlalchemy import text
 
 from app.db.session import SessionLocal, create_schema, drop_schema, create_company_schema_tables
 from app.models.company import Company
@@ -27,13 +28,13 @@ def get_all_database_schemas() -> list:
     db = SessionLocal()
     try:
         # Query information_schema.schemata to get all schemas
-        result = db.execute("""
+        result = db.execute(text("""
             SELECT schema_name 
             FROM information_schema.schemata 
             WHERE schema_name NOT IN ('pg_catalog', 'information_schema')
             AND schema_name NOT LIKE 'pg_toast%'
             AND schema_name NOT LIKE 'pg_temp%'
-        """)
+        """))
         schemas = [row[0] for row in result]
         return schemas
     finally:
