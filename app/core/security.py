@@ -220,34 +220,14 @@ def check_user_permissions(required_permissions: list[str] = None):
         if current_user.role == UserRole.ADMIN:
             return current_user
 
-        # If specific permissions are required, check the user's role permissions
+        # If specific permissions are required, check the user's permissions
         if required_permissions:
-            user_permissions = []
-
-            # In a real app, you would load permissions from the database
-            # This is simplified for now - uses role to assume permissions
-            if current_user.role == UserRole.MANAGER:
-                # Managers can do everything except user management
-                user_permissions = [
-                    p for p in required_permissions
-                    if not p.startswith("create_users")
-                       and not p.startswith("update_users")
-                       and not p.startswith("delete_users")
-                ]
-            elif current_user.role == UserRole.STAFF:
-                # Staff can only view things
-                user_permissions = [
-                    p for p in required_permissions
-                    if p.startswith("view_")
-                ]
-
-            # Check if user has required permissions
-            missing_permissions = set(required_permissions) - set(user_permissions)
-            if missing_permissions:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Not enough permissions. Missing: {missing_permissions}",
-                )
+            for permission in required_permissions:
+                if not current_user.has_permission(permission):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Not enough permissions. Missing: {permission}",
+                    )
 
         return current_user
 
