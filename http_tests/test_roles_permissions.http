@@ -1,0 +1,180 @@
+### Login first to get tokens
+POST http://127.0.0.1:8000/api/v1/auth/login/json
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Initialize permissions
+POST http://127.0.0.1:8000/api/v1/permissions/initialize
+Authorization: Bearer {{access_token}}
+
+### Get all permission modules
+GET http://127.0.0.1:8000/api/v1/permissions/modules
+Authorization: Bearer {{access_token}}
+
+### Get all permissions
+GET http://127.0.0.1:8000/api/v1/permissions
+Authorization: Bearer {{access_token}}
+
+### Filter permissions by module
+GET http://127.0.0.1:8000/api/v1/permissions?module=users
+Authorization: Bearer {{access_token}}
+
+### Create a new permission
+POST http://127.0.0.1:8000/api/v1/permissions
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "code": "custom_permission",
+  "name": "Custom Permission",
+  "module": "custom",
+  "description": "A custom permission for testing"
+}
+
+> {%
+    if (response.status === 201) {
+        client.global.set("new_permission_id", response.body.id);
+    }
+%}
+
+### Get permission by ID
+GET http://127.0.0.1:8000/api/v1/permissions/{{new_permission_id}}
+Authorization: Bearer {{access_token}}
+
+### Update permission
+PUT http://127.0.0.1:8000/api/v1/permissions/{{new_permission_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Custom Permission",
+  "description": "An updated description for testing"
+}
+
+### Get all roles
+GET http://127.0.0.1:8000/api/v1/roles
+Authorization: Bearer {{access_token}}
+
+### Create a new role
+POST http://127.0.0.1:8000/api/v1/roles
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Content Editor",
+  "description": "Can create and edit content but not manage users",
+  "permission_ids": ["{{new_permission_id}}"]
+}
+
+> {%
+    if (response.status === 201) {
+        client.global.set("new_role_id", response.body.id);
+    }
+%}
+
+### Get role by ID
+GET http://127.0.0.1:8000/api/v1/roles/{{new_role_id}}
+Authorization: Bearer {{access_token}}
+
+### Update role
+PUT http://127.0.0.1:8000/api/v1/roles/{{new_role_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Content Manager",
+  "description": "Can create, edit, and publish content"
+}
+
+### Update role permissions
+PUT http://127.0.0.1:8000/api/v1/roles/{{new_role_id}}/permissions
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "add_permission_ids": [],
+  "remove_permission_ids": ["{{new_permission_id}}"]
+}
+
+### Create a new user with the custom role
+POST http://127.0.0.1:8000/api/v1/users
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "email": "content_managers@example.com",
+  "username": "content_manager",
+  "name": "Content",
+  "surname": "Manager",
+  "telephone": "+1234567890",
+  "password": "password123",
+  "role": "staff",
+  "role_id": "{{new_role_id}}",
+  "is_active": true
+}
+
+> {%
+    if (response.status === 201) {
+        client.global.set("new_user_id", response.body.id);
+    }
+%}
+
+### Get the new user
+GET http://127.0.0.1:8000/api/v1/users/{{new_user_id}}
+Authorization: Bearer {{access_token}}
+
+### Login as the new user
+POST http://127.0.0.1:8000/api/v1/auth/login/json
+Content-Type: application/json
+
+{
+  "email": "content_manager@example.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("content_manager_token", response.body.access_token);
+%}
+
+### Try to access a protected endpoint with the new user
+GET http://127.0.0.1:8000/api/v1/users
+Authorization: Bearer {{content_manager_token}}
+
+### Add more permissions to the role
+PUT http://127.0.0.1:8000/api/v1/roles/{{new_role_id}}/permissions
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "add_permission_ids": [],
+  "remove_permission_ids": []
+}
+
+### Delete the test permission (should fail if assigned to a role)
+DELETE http://127.0.0.1:8000/api/v1/permissions/{{new_permission_id}}
+Authorization: Bearer {{access_token}}
+
+### Delete the test role (should fail if assigned to a user)
+DELETE http://127.0.0.1:8000/api/v1/roles/{{new_role_id}}
+Authorization: Bearer {{access_token}}
+
+### Delete the test user
+DELETE http://127.0.0.1:8000/api/v1/users/{{new_user_id}}
+Authorization: Bearer {{access_token}}
+
+### Now try deleting the role again
+DELETE http://127.0.0.1:8000/api/v1/roles/{{new_role_id}}
+Authorization: Bearer {{access_token}}
+
+### Finally, delete the permission
+DELETE http://127.0.0.1:8000/api/v1/permissions/{{new_permission_id}}
+Authorization: Bearer {{access_token}}

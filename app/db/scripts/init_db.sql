@@ -66,22 +66,37 @@ SET search_path TO company_default;
 -- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Create permission table
+CREATE TABLE IF NOT EXISTS permission (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    code VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    module VARCHAR(255) NOT NULL,
+    description TEXT,
+    company_id UUID NOT NULL,
+    CONSTRAINT unique_permission_code_per_company UNIQUE (code, company_id)
+);
 
+DROP TABLE role CASCADE;
 CREATE TABLE IF NOT EXISTS role (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     name VARCHAR(255) NOT NULL,
     description VARCHAR(255),
-    permissions VARCHAR(255),
-    company_id UUID NOT NULL
+    is_system_role BOOLEAN NOT NULL DEFAULT FALSE,
+    company_id UUID NOT NULL,
+    CONSTRAINT unique_role_name_per_company UNIQUE (name, company_id)
 );
 
 -- Create role_permissions table
+DROP TABLE role_permissions CASCADE;
 CREATE TABLE IF NOT EXISTS role_permissions (
     role_id UUID NOT NULL REFERENCES role(id) ON DELETE CASCADE,
-    permission_name VARCHAR(255) NOT NULL,
-    PRIMARY KEY (role_id, permission_name)
+    permission_id UUID NOT NULL REFERENCES permission(id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id)
 );
 
 -- Create user table
@@ -103,18 +118,91 @@ CREATE TABLE IF NOT EXISTS "user" (
     company_id UUID NOT NULL
 );
 
+-- Insert base permissions
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'users_create', 'Create Users', 'users', 'Allows creating new users', id
+FROM public.company WHERE slug = 'default';
 
--- Create an admin role
-INSERT INTO role (name, description, permissions, company_id)
-SELECT 'ADMIN', 'Administrator with full system access', 'all', id
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'users_read', 'View Users', 'users', 'Allows viewing user information', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'users_update', 'Update Users', 'users', 'Allows updating user information', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'users_delete', 'Delete Users', 'users', 'Allows deleting users', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'users_manage_permissions', 'Manage User Permissions', 'users', 'Allows managing user permissions and roles', id
+FROM public.company WHERE slug = 'default';
+
+-- Role permissions
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'roles_create', 'Create Roles', 'roles', 'Allows creating roles', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'roles_read', 'View Roles', 'roles', 'Allows viewing role information', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'roles_update', 'Update Roles', 'roles', 'Allows updating role information', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'roles_delete', 'Delete Roles', 'roles', 'Allows deleting roles', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'roles_manage_permissions', 'Manage Role Permissions', 'roles', 'Allows managing permissions for roles', id
+FROM public.company WHERE slug = 'default';
+
+-- Permission permissions
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'permissions_create', 'Create Permissions', 'permissions', 'Allows creating permissions', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'permissions_read', 'View Permissions', 'permissions', 'Allows viewing permission information', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'permissions_update', 'Update Permissions', 'permissions', 'Allows updating permission information', id
+FROM public.company WHERE slug = 'default';
+
+INSERT INTO permission (code, name, module, description, company_id)
+SELECT 'permissions_delete', 'Delete Permissions', 'permissions', 'Allows deleting permissions', id
+FROM public.company WHERE slug = 'default';
+
+-- Create an admin role with is_system_role=true
+INSERT INTO role (name, description, is_system_role, company_id)
+SELECT 'ADMIN', 'Administrator with full system access', TRUE, id
 FROM public.company
 WHERE slug = 'default'
 ON CONFLICT DO NOTHING;
-INSERT INTO role (name, description, permissions, company_id)
-SELECT 'STAFF', 'Staff/Employee', 'none', id
+
+-- Create a staff role with is_system_role=true
+INSERT INTO role (name, description, is_system_role, company_id)
+SELECT 'STAFF', 'Staff/Employee with limited access', TRUE, id
 FROM public.company
 WHERE slug = 'default'
 ON CONFLICT DO NOTHING;
+
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT
+    r.id,
+    p.id
+FROM
+    role r,
+    permission p
+WHERE
+    r.name = 'ADMIN' AND
+    r.company_id = (SELECT id FROM public.company WHERE slug = 'default') AND
+    p.company_id = (SELECT id FROM public.company WHERE slug = 'default');
 
 
 -- Create an admin user (password: admin123)
