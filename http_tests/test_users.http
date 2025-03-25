@@ -1,0 +1,87 @@
+### Login first to get tokens
+POST http://127.0.0.1:8000/api/v1/auth/login/json
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Get current user (me) details
+GET http://127.0.0.1:8000/api/v1/users/me
+Authorization: Bearer {{access_token}}
+
+### Get all users
+GET http://127.0.0.1:8000/api/v1/users/
+Authorization: Bearer {{access_token}}
+
+### Create a new user
+POST http://127.0.0.1:8000/api/v1/users/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "email": "staff1@example.com",
+  "username": "staff1",
+  "name": "Staff",
+  "surname": "User",
+  "telephone": "+1234567890",
+  "password": "staff123",
+  "role": "staff",
+  "role_id": "1b33e53b-11e6-414c-b397-bae025906819",
+  "is_active": true
+}
+
+> {%
+    if (response.status === 201) {
+        client.global.set("new_user_id", response.body.id);
+    }
+%}
+
+### Get user by ID
+GET http://127.0.0.1:8000/api/v1/users/{{new_user_id}}
+Authorization: Bearer {{access_token}}
+
+### Update user
+PUT http://127.0.0.1:8000/api/v1/users/{{new_user_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Staff",
+  "surname": "Updated User",
+  "telephone": "+9876543210"
+}
+
+### Update current user password
+PUT http://127.0.0.1:8000/api/v1/users/me/password
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "current_password": "admin123",
+  "new_password": "newadmin123"
+}
+
+### Login with new password (to verify password change worked)
+POST http://127.0.0.1:8000/api/v1/auth/login/json
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "newadmin123"
+}
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Delete user
+DELETE http://127.0.0.1:8000/api/v1/users/{{new_user_id}}
+Authorization: Bearer {{access_token}}
