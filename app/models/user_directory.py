@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -10,6 +10,8 @@ class UserDirectory(BaseModel):
     Central registry of users to map them to their respective company schemas
     This model is stored in the public schema
     """
+
+    __tablename__ = "user_directory"
 
     email = Column(String(255), nullable=False, unique=True, index=True)
     username = Column(String(255), nullable=False, unique=True, index=True)

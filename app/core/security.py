@@ -96,6 +96,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True if the password matches the hash
     """
+    print(f'Hash: {get_password_hash(plain_password)}')
     return pwd_context.verify(plain_password, hashed_password)
 
 

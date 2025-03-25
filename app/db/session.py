@@ -57,6 +57,10 @@ def create_schema(schema_name: str):
         # Create the schema if it doesn't exist
         db.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'))
         db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating schema: {e}")
+        raise
     finally:
         db.close()
 
@@ -100,7 +104,7 @@ def create_company_schema_tables(schema_name: str):
         tenant_metadata = BaseModel.metadata.tables.copy()
 
         # Remove tables that should remain in public schema
-        public_tables = ["company"]
+        public_tables = ["company", "user_directory"]
         for table_name in public_tables:
             if table_name in tenant_metadata:
                 del tenant_metadata[table_name]

@@ -1,22 +1,3 @@
--- Database user creation and permissions
--- Note: This needs to be run by a PostgreSQL user with superuser privileges (like postgres)
-DO $$
-BEGIN
-    -- Create user if it doesn't exist
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'api_user') THEN
-        CREATE USER api_user WITH PASSWORD 'api_password';
-    END IF;
-END
-$$;
-
-SET search_path TO public;
--- Grant privileges to the user
-GRANT CONNECT ON DATABASE vos_api_v5 TO api_user;
-GRANT USAGE, CREATE ON SCHEMA public TO api_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO api_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO api_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO api_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO api_user;
 -- Initialize schema and tables for the multi-tenant architecture
 -- Run this script once to set up the initial database structure
 
@@ -117,14 +98,15 @@ CREATE TABLE IF NOT EXISTS "user" (
     role_id UUID NOT NULL REFERENCES role(id),
     role VARCHAR(255) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    refresh_token VARCHAR(255),
+    refresh_token VARCHAR(1024),
     last_login TIMESTAMP WITH TIME ZONE,
     company_id UUID NOT NULL
 );
 
+
 -- Create an admin role
 INSERT INTO role (name, description, permissions, company_id)
-SELECT 'admin', 'Administrator with full system access', 'all', id
+SELECT 'ADMIN', 'Administrator with full system access', 'all', id
 FROM public.company
 WHERE slug = 'default'
 ON CONFLICT DO NOTHING;
@@ -139,7 +121,7 @@ SELECT
     'User',
     '123-456-7890',
     r.id,
-    'admin',
+    'ADMIN',
     c.id
 FROM
     public.company c,

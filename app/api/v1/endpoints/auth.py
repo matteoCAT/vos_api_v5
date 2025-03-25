@@ -59,6 +59,8 @@ def login(
         (User.email == form_data.username) |
         (User.username == form_data.username)
     ).first()
+    print(user.hashed_password)
+    print(user)
 
     # Check if user exists and password is correct
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -130,6 +132,7 @@ def login_json(
 
     # Set the schema to the user's company schema
     db.execute(text(f'SET search_path TO {user_dir.schema_name}, public'))
+    db.execute(text(f'SELECT * FROM {user_dir.schema_name}.user'))
 
     # Now find the actual user record in the company schema
     user = db.query(User).filter(User.email == login_data.email).first()
@@ -218,10 +221,22 @@ def refresh_token(
                 detail="Invalid refresh token - missing company_id",
             )
 
-        # Set the company context in the request state
-        request.state.company_id = company_id
+        # First, query the user_directory to find the right schema
+        db.execute(text('SET search_path TO public'))
 
-        # Get the user
+        from app.models.user_directory import UserDirectory
+        user_dir = db.query(UserDirectory).filter(UserDirectory.company_id == company_id).first()
+
+        if not user_dir:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid company information in token",
+            )
+
+        # Now switch to the correct company schema
+        db.execute(text(f'SET search_path TO {user_dir.schema_name}, public'))
+
+        # Get the user from the correct schema
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(

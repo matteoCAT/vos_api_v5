@@ -3,6 +3,7 @@ from slugify import slugify
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.crud.base import CRUDBase
 from app.models.company import Company
@@ -81,6 +82,9 @@ class CRUDCompany(CRUDBase[Company, CompanyCreate, CompanyUpdate]):
         Returns:
             Company: Created company instance
         """
+        # Ensure we're in the public schema
+        db.execute(text('SET search_path TO public'))
+
         # Generate slug if not provided
         slug = obj_in.slug if hasattr(obj_in, 'slug') and obj_in.slug else slugify(obj_in.name)
 
@@ -118,6 +122,61 @@ class CRUDCompany(CRUDBase[Company, CompanyCreate, CompanyUpdate]):
             print(f"Error creating schema for company {db_obj.name}: {e}")
 
         return db_obj
+
+    def update(
+            self, db: Session, *, db_obj: Company, obj_in: Union[CompanyUpdate, Dict[str, Any]]
+    ) -> Company:
+        """
+        Update a company
+
+        Args:
+            db: Database session
+            db_obj: Company model instance
+            obj_in: CompanyUpdate schema or dict
+
+        Returns:
+            Company: Updated company instance
+        """
+        # Ensure we're in the public schema
+        db.execute(text('SET search_path TO public'))
+
+        # Handle both dict and schema input
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.dict(exclude_unset=True)
+
+        # If updating slug, make sure it's properly slugified
+        if "slug" in update_data and update_data["slug"]:
+            update_data["slug"] = slugify(update_data["slug"])
+
+        # Schema name cannot be updated for existing companies
+        if "schema_name" in update_data:
+            del update_data["schema_name"]
+
+        return super().update(db, db_obj=db_obj, obj_in=update_data)
+
+    def remove(self, db: Session, *, id: UUID) -> Company:
+        """
+        Delete a company record (does not drop the schema)
+
+        Args:
+            db: Database session
+            id: Company ID
+
+        Returns:
+            Company: Deleted company instance
+        """
+        # Ensure we're in the public schema
+        db.execute(text('SET search_path TO public'))
+
+        # Get the company first
+        company = self.get(db, id=id)
+        if not company:
+            return None
+
+        # Remove the company record
+        return super().remove(db, id=id)
 
 
 # Create an instance of the CRUD class
