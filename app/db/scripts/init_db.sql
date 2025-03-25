@@ -110,6 +110,12 @@ SELECT 'ADMIN', 'Administrator with full system access', 'all', id
 FROM public.company
 WHERE slug = 'default'
 ON CONFLICT DO NOTHING;
+INSERT INTO role (name, description, permissions, company_id)
+SELECT 'STAFF', 'Staff/Employee', 'none', id
+FROM public.company
+WHERE slug = 'default'
+ON CONFLICT DO NOTHING;
+
 
 -- Create an admin user (password: admin123)
 INSERT INTO "user" (email, username, hashed_password, name, surname, telephone, role_id, role, company_id)

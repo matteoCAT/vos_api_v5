@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -28,7 +29,20 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         """
         return db.query(User).filter(User.email == email).first()
 
-    def create(self, db: Session, *, obj_in: UserCreate, company_id: str) -> User:
+    def get_by_username(self, db: Session, *, username: str) -> Optional[User]:
+        """
+        Get a user by username
+
+        Args:
+            db: Database session
+            username: Username
+
+        Returns:
+            Optional[User]: User instance if found, None otherwise
+        """
+        return db.query(User).filter(User.username == username).first()
+
+    def create(self, db: Session, *, obj_in: UserCreate, company_id: Union[str, UUID]) -> User:
         """
         Create a new user with hashed password and add to the central directory
 
@@ -69,7 +83,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             telephone=obj_in.telephone,
             role=obj_in.role,
             role_id=obj_in.role_id,
-            is_active=obj_in.is_active,
+            is_active=obj_in.is_active if obj_in.is_active is not None else True,
             company_id=company_id
         )
         db.add(db_obj)
@@ -111,8 +125,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
         # If email or username changed, update the user directory as well
         if email_changed or username_changed:
-            # Switch to public schema to update the directory
+            # Get current schema before switching
             current_schema = db.execute(text("SHOW search_path")).fetchone()[0]
+
+            # Switch to public schema to update the directory
             db.execute(text('SET search_path TO public'))
 
             # Find and update the directory entry
@@ -134,13 +150,33 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
         return updated_user
 
-    def delete(self, db: Session, *, user_id: str) -> None:
+    def get_multi_by_company(
+            self, db: Session, *, company_id: Union[str, UUID], skip: int = 0, limit: int = 100
+    ) -> List[User]:
+        """
+        Get multiple users for a specific company with pagination
+
+        Args:
+            db: Database session
+            company_id: Company ID
+            skip: Number of records to skip (pagination)
+            limit: Maximum number of records to return (pagination)
+
+        Returns:
+            List[User]: List of user instances
+        """
+        return db.query(User).filter(User.company_id == company_id).offset(skip).limit(limit).all()
+
+    def delete(self, db: Session, *, user_id: Union[str, UUID]) -> Optional[User]:
         """
         Delete a user and their entry in the user directory
 
         Args:
             db: Database session
             user_id: ID of the user to delete
+
+        Returns:
+            Optional[User]: Deleted user instance if found, None otherwise
         """
         # Get the user to find their email/username
         user = self.get(db, id=user_id)
