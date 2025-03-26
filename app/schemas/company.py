@@ -57,6 +57,7 @@ class CompanyCreate(CompanyBase):
 class CompanyUpdate(BaseModel):
     """Schema for updating a company"""
     name: Optional[str] = None
+    slug: Optional[str] = None
     display_name: Optional[str] = None
     description: Optional[str] = None
     logo_url: Optional[str] = None

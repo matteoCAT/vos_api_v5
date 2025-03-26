@@ -1,0 +1,104 @@
+### Login first to get tokens
+POST http://127.0.0.1:8000/api/v1/auth/login/json
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+
+> {%
+    client.global.set("access_token", response.body.access_token);
+    client.global.set("refresh_token", response.body.refresh_token);
+%}
+
+### Get all companies
+GET http://127.0.0.1:8000/api/v1/companies/
+Authorization: Bearer {{access_token}}
+
+### Get only active companies
+GET http://127.0.0.1:8000/api/v1/companies/?active_only=true
+Authorization: Bearer {{access_token}}
+
+### Create a new company
+POST http://127.0.0.1:8000/api/v1/companies/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Test Company",
+  "slug": "test_company",
+  "display_name": "Test Company Inc.",
+  "description": "A company for testing",
+  "contact_name": "Test Manager",
+  "email": "contact@testcompany.com",
+  "phone": "+1234567890",
+  "address": "123 Test St, Testville",
+  "tax_id": "TEST123456",
+  "registration_number": "REG9876543",
+  "is_active": true
+}
+
+> {%
+    if (response.status === 200) {
+        client.global.set("company_id", response.body.id);
+    }
+%}
+
+### Get company by ID
+GET http://127.0.0.1:8000/api/v1/companies/{{company_id}}
+Authorization: Bearer {{access_token}}
+
+### Update company
+PUT http://127.0.0.1:8000/api/v1/companies/{{company_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "name": "Test Company (Updated)",
+  "display_name": "Test Company Updated Inc.",
+  "contact_name": "Updated Manager",
+  "email": "updated@testcompany.com"
+}
+
+### Delete company (this does not delete the schema)
+DELETE http://127.0.0.1:8000/api/v1/companies/{{company_id}}
+Authorization: Bearer {{access_token}}
+
+### Drop company schema (destructive - requires confirmation)
+POST http://127.0.0.1:8000/api/v1/companies/{{company_id}}/drop-schema?confirm=true
+Authorization: Bearer {{access_token}}
+
+### Try to access companies endpoint with a non-admin user
+# First create a non-admin user
+POST http://127.0.0.1:8000/api/v1/users/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "email": "staff@example.com",
+  "username": "staff",
+  "name": "Staff",
+  "surname": "User",
+  "telephone": "+1234567890",
+  "password": "password123",
+  "role": "STAFF",
+  "is_active": true
+}
+
+### Login as the staff user
+POST http://127.0.0.1:8000/api/v1/auth/login/json
+Content-Type: application/json
+
+{
+  "email": "staff@example.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("staff_token", response.body.access_token);
+%}
+
+### Try to access companies endpoint with staff user (should fail)
+GET http://127.0.0.1:8000/api/v1/companies/
+Authorization: Bearer {{staff_token}}
