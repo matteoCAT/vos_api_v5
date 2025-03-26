@@ -114,11 +114,19 @@ class CRUDCompany(CRUDBase[Company, CompanyCreate, CompanyUpdate]):
 
         # Create the schema and tables for this company
         try:
+            print(f"Creating schema and tables for company {db_obj.name}")
+
+            # Create schema first
+            from app.db.session import create_schema
             create_schema(schema_name)
+
+            # Then create tables
+            from app.db.session import create_company_schema_tables
             create_company_schema_tables(schema_name)
+
+            print(f"Successfully created schema and tables for company {db_obj.name}")
         except Exception as e:
-            # If schema creation fails, we should probably delete the company record
-            # and roll back, but for simplicity, we'll just log the error for now
+            # If schema creation fails, log the error but don't delete the company record
             print(f"Error creating schema for company {db_obj.name}: {e}")
 
         return db_obj

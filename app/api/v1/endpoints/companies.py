@@ -19,7 +19,7 @@ def check_superuser_permissions(current_user: User):
     Check if the current user has superuser permissions (permissions='all')
     """
     # For now, simply check if user has admin role or role with 'all' permissions
-    if current_user.role != "ADMIN" and (
+    if current_user.role != "admin" and (
             not hasattr(current_user.role_obj, "permissions") or
             current_user.role_obj.permissions != "all"
     ):
